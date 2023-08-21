@@ -280,7 +280,11 @@ func (self *Board) Visualize(side Player) string {
 		row := &self[i]
 		builder.WriteString(strconv.Itoa(i + 1))
 		builder.WriteString(" │ ")
-		for _, cell := range row {
+		for j := range row {
+			if side == Black {
+				j = len(self) - j - 1
+			}
+			cell := &self[i][j]
 			if cell.Unit != nil {
 				builder.WriteString(cell.Unit.visualize())
 			} else {
@@ -292,8 +296,11 @@ func (self *Board) Visualize(side Player) string {
 	}
 
 	builder.WriteString(" ")
-	for i := 'a'; i <= 'h'; i++ {
-		builder.WriteString("   " + string(i))
+	for i := 0; i < 8; i++ {
+		if side == Black {
+			i = 7 - i
+		}
+		builder.WriteString("   " + string(rune('a'+i)))
 	}
 	return builder.String()
 }
