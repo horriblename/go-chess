@@ -53,6 +53,7 @@ func main() {
 
 gameLoop:
 	for {
+		println(appState.curr.Visualize(appState.color))
 		println("Waiting for opponent...")
 		err = websocket.JSON.Receive(ws, &data)
 		if err != nil {
@@ -62,6 +63,10 @@ gameLoop:
 		switch data.Message {
 		case proto.PlayerTurn:
 			appState.playMove(data.OpponentMove[0], data.OpponentMove[1])
+			fmt.Printf("=== Opponent played: %s -> %s\n", data.OpponentMove[0], data.OpponentMove[1])
+		case proto.IllegalMove:
+			println("That move was illegal: Please try again")
+			appState.rollback()
 		case proto.GameEnded:
 			if data.Winner == "player" {
 				println("Game Ended: You Won!")
@@ -69,13 +74,12 @@ gameLoop:
 				println("Game Ended: You Lost!")
 			}
 			break gameLoop
-		case proto.IllegalMove:
-			println("That move was illegal: Please try again")
-			appState.rollback()
 
 		default:
 			log.Printf("unexpected message: %s", data.Message)
 		}
+
+		appState.playerMove(ws)
 	}
 }
 
@@ -87,6 +91,7 @@ func (self *AppState) playerMove(ws *websocket.Conn) {
 		log.Printf("sending JSON: %s", err)
 	}
 
+	fmt.Printf("=== You played: %s -> %s\n", from, to)
 	err = self.playMove(from, to)
 	if err != nil {
 		panic(err)
@@ -121,9 +126,12 @@ func (self *AppState) playMove(from string, to string) error {
 	if err != nil {
 		return err
 	}
-	b, err := chess.CoordFromChessNotation(from)
+	b, err := chess.CoordFromChessNotation(to)
 	if err != nil {
 		return err
+	}
+	if a == b {
+		return fmt.Errorf("moving piece from same place to itself")
 	}
 
 	self.curr[b.Y][b.X].Unit = self.curr[a.Y][a.X].Unit
