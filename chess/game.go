@@ -225,9 +225,9 @@ func (self *Board) generateMovesInDirection(origin, delta Coord) []Coord {
 		if !inBounds(ci.X, ci.Y) {
 			break
 		}
-		unit_i := self.getCoord(ci)
+		unit_i := self.getCoord(ci).Unit
 		if unit_i != nil {
-			if unit_i.Unit.Color != self.getCoord(origin).Unit.Color {
+			if unit_i.Color != self.getCoord(origin).Unit.Color {
 				coords = append(coords, ci)
 			}
 			break
