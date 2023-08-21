@@ -126,20 +126,21 @@ func (self *gameSession) startGame() {
 		}
 	}
 
+gameLoop:
 	for {
 		select {
 		case rcv := <-self.whiteReceive:
 			if rcv.disconnected {
 				close(self.whiteSend)
 				close(self.blackSend)
-				break
+				break gameLoop
 			}
 			if self.game.Turn() != chess.White {
 				// ignore messages that are out of turn
 				continue
 			}
 			req = rcv
-			send = self.whiteSend
+			sendPlayer = self.whiteSend
 			sendOpponent = self.blackSend
 			player = chess.White
 
@@ -147,13 +148,14 @@ func (self *gameSession) startGame() {
 			if rcv.disconnected {
 				close(self.whiteSend)
 				close(self.blackSend)
+				break gameLoop
 			}
 			if self.game.Turn() != chess.Black {
 				// ignore messages that are out of turn
 				continue
 			}
 			req = rcv
-			send = self.blackSend
+			sendPlayer = self.blackSend
 			sendOpponent = self.whiteSend
 			player = chess.Black
 		}
@@ -182,6 +184,8 @@ func (self *gameSession) startGame() {
 		sendOpponent <- proto.Event{
 			Message: proto.PlayerTurn, OpponentMove: req.req.Move}
 	}
+
+	log.Println("game session ended")
 }
 
 func (self *gameServer) generateUniqueUserID() userID {
