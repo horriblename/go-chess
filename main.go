@@ -117,11 +117,11 @@ func (self *gameSession) startGame() {
 	self.blackSend <- proto.Event{Message: proto.GameStart, StartFirst: false}
 
 	var req receiveType
-	var send chan proto.Event
+	var sendPlayer chan proto.Event
 	var sendOpponent chan proto.Event
 	var player chess.Player
 	sendIllegalMove := func() {
-		send <- proto.Event{
+		sendPlayer <- proto.Event{
 			Message: proto.IllegalMove,
 		}
 	}
@@ -182,7 +182,9 @@ gameLoop:
 		}
 
 		sendOpponent <- proto.Event{
-			Message: proto.PlayerTurn, OpponentMove: req.req.Move}
+			Message:      proto.PlayerTurn,
+			OpponentMove: req.req.Move,
+		}
 	}
 
 	log.Println("game session ended")
