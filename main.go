@@ -160,19 +160,23 @@ func (self *gameSession) startGame() {
 
 		if req.req == nil || req.req.Request != proto.Move {
 			sendIllegalMove()
+			continue
 		}
 
 		from, err = chess.CoordFromChessNotation(req.req.Move[0])
 		if err != nil {
 			sendIllegalMove()
+			continue
 		}
 		to, err = chess.CoordFromChessNotation(req.req.Move[1])
 		if err != nil {
 			sendIllegalMove()
+			continue
 		}
 		err = self.game.Play(player, from, to)
 		if err != nil {
 			sendIllegalMove()
+			continue
 		}
 
 		sendOpponent <- proto.Event{
