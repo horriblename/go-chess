@@ -1,6 +1,6 @@
 port module Game exposing (..)
 
-import Array exposing (Array)
+import Array exposing (Array, get, set)
 import Browser
 import Dict exposing (Dict)
 import Html exposing (Html, button, div, table, td, text, tr)
@@ -8,6 +8,7 @@ import Html.Attributes exposing (style)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Decoder, decodeString)
 import Json.Encode
+import Maybe exposing (andThen)
 
 
 main : Program () Model Msg
@@ -36,6 +37,7 @@ type Model
 
 type alias GameState =
     { inTurn : Bool
+    , playerColor : Player
     , board : Board
     , chosenPiece : Maybe Coord
     }
@@ -145,6 +147,10 @@ update msg model =
 
 handleWebsocketEvent : Result Decode.Error WsEvent -> Model -> ( Model, Cmd Msg )
 handleWebsocketEvent event model =
+    let
+        _ =
+            Debug.log "received websocket event" event
+    in
     case ( event, model ) of
         ( Err _, _ ) ->
             -- TODO: log or something?
@@ -161,7 +167,15 @@ handleEventInQueue : WsEvent -> Model -> ( Model, Cmd Msg )
 handleEventInQueue { msg, startFirst } model =
     case ( msg, startFirst ) of
         ( GameStart, Just first ) ->
-            ( InGame (GameState first newBoard Nothing)
+            let
+                playerColor =
+                    if first then
+                        White
+
+                    else
+                        Black
+            in
+            ( InGame (GameState first playerColor newBoard Nothing)
             , Cmd.none
             )
 
@@ -190,18 +204,96 @@ handleOnClick model coord =
     case model of
         InGame state ->
             let
-                { chosenPiece } =
+                { chosenPiece, inTurn } =
                     state
             in
-            case chosenPiece of
-                Nothing ->
-                    ( InGame { state | chosenPiece = Just coord }, Cmd.none )
+            if not inTurn then
+                ( model, Cmd.none )
 
-                Just chosen ->
-                    ( InGame { state | chosenPiece = Nothing }, sendMessage "TODO" )
+            else
+                case chosenPiece of
+                    Nothing ->
+                        ( InGame { state | chosenPiece = Just coord }, Cmd.none )
+
+                    Just chosen ->
+                        ( InGame { state | chosenPiece = Nothing }, sendMessage "TODO" )
 
         _ ->
             ( model, Cmd.none )
+
+
+type Request
+    = Move ( String, String )
+
+
+requestEncoder : Request -> Json.Encode.Value
+requestEncoder request =
+    case request of
+        Move move ->
+            Json.Encode.object
+                [ ( "request", Json.Encode.string "move" )
+                , ( "move", moveEncoder move )
+                ]
+
+
+moveEncoder : ( String, String ) -> Json.Encode.Value
+moveEncoder ( from, to ) =
+    Json.Encode.list Json.Encode.string [ from, to ]
+
+
+playMove : Coord -> Coord -> Board -> ( Board, Maybe Request )
+playMove origin destination board =
+    case movePiece origin destination board of
+        Nothing ->
+            ( board, Nothing )
+
+        Just board1 ->
+            ( board1, Just (Move ( coordToChessNotation origin, coordToChessNotation destination )) )
+
+
+movePiece : Coord -> Coord -> Board -> Maybe Board
+movePiece origin destination board =
+    let
+        cell =
+            case boardGet origin board of
+                Just (Just unit) ->
+                    Just unit
+
+                _ ->
+                    Nothing
+    in
+    case cell of
+        Nothing ->
+            Just board
+
+        Just unit ->
+            board
+                |> setPiece destination (Just unit)
+                |> andThen (setPiece origin Nothing)
+
+
+orElse : a -> Maybe a -> a
+orElse other this =
+    case this of
+        Nothing ->
+            other
+
+        Just inner ->
+            inner
+
+
+boardGet : Coord -> Board -> Maybe Cell
+boardGet { x, y } board =
+    board |> get y |> andThen (get x)
+
+
+setPiece : Coord -> Cell -> Board -> Maybe Board
+setPiece { x, y } cell board =
+    let
+        maybeRow =
+            get y board
+    in
+    maybeRow |> Maybe.map (\row -> set y (set x cell row) board)
 
 
 wsEventDecoder : Decoder WsEvent
@@ -293,8 +385,18 @@ gamePage =
 
 
 drawBoard : GameState -> Html Msg
-drawBoard state =
-    text "TODO"
+drawBoard { board, playerColor } =
+    let
+        renderRow y row =
+            row
+                |> Array.toList
+                |> List.indexedMap (\x cell -> renderCell cell (Coord x y))
+                |> tr []
+    in
+    board
+        |> Array.toList
+        |> List.indexedMap renderRow
+        |> table []
 
 
 renderCell : Cell -> Coord -> Html Msg
