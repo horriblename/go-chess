@@ -1,5 +1,6 @@
 port module Game exposing (..)
 
+import Array exposing (Array)
 import Browser
 import Dict exposing (Dict)
 import Html exposing (Html, button, div, table, td, text, tr)
@@ -41,7 +42,7 @@ type alias GameState =
 
 
 type alias Board =
-    List (List Cell)
+    Array (Array Cell)
 
 
 type alias Cell =
@@ -72,7 +73,7 @@ type ChessPiece
     | King
 
 
-newBoard : List (List Cell)
+newBoard : Board
 newBoard =
     let
         w x =
@@ -82,15 +83,16 @@ newBoard =
             Just <| Unit x Black
 
         row1 c =
-            [ c Rook, c Knight, c Bishop, c Queen, c King, c Bishop, c Knight, c Rook ]
+            Array.fromList [ c Rook, c Knight, c Bishop, c Queen, c King, c Bishop, c Knight, c Rook ]
     in
     [ row1 w
-    , List.repeat 8 (w Pawn)
+    , Array.repeat 8 (w Pawn)
     ]
-        ++ List.repeat 4 (List.repeat 8 Nothing)
-        ++ [ List.repeat 8 (b Pawn)
+        ++ List.repeat 4 (Array.repeat 8 Nothing)
+        ++ [ Array.repeat 8 (b Pawn)
            , row1 b
            ]
+        |> Array.fromList
 
 
 init : () -> ( Model, Cmd Msg )
