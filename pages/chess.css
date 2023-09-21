@@ -1,22 +1,68 @@
 :root {
+}
 
+html {
+  background-color: gray;
 }
 
 div#notification-container {
-	background: aqua;
-	min-height: 3rem;
-	padding: 1em;
+  background: aqua;
+  min-height: 3rem;
+  padding: 1em;
 }
 
 tbody#board-body > tr > td {
-	height: 3rem;
-	width: 3rem;
+  height: 3rem;
+  width: 3rem;
 }
 
 .tile-dark {
-	background-color: yellow;
+  background-color: yellow;
 }
 
-.tile-white {
-	background-color: white;
+.tile-light {
+  background-color: white;
+}
+
+td > * {
+  height: 100%;
+  width: 100%;
+}
+
+.white.rook {
+  background-image: url("/assets/white_rook.svg");
+}
+.black.rook {
+  background-image: url("/assets/black_rook.svg");
+}
+.white.knight {
+  background-image: url("/assets/white_knight.svg");
+}
+.white.bishop {
+  background-image: url("/assets/white_bishop.svg");
+}
+.white.queen {
+  background-image: url("/assets/white_queen.svg");
+}
+.white.king {
+  background-image: url("/assets/white_king.svg");
+}
+.white.pawn {
+  background-image: url("/assets/white_pawn.svg");
+}
+
+.black.knight {
+  background-image: url("/assets/black_knight.svg");
+}
+.black.bishop {
+  background-image: url("/assets/black_bishop.svg");
+}
+.black.queen {
+  background-image: url("/assets/black_queen.svg");
+}
+.black.king {
+  background-image: url("/assets/black_king.svg");
+}
+.black.pawn {
+  background-image: url("/assets/black_pawn.svg");
 }
