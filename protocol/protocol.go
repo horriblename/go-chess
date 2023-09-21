@@ -18,10 +18,11 @@ type Request struct {
 type EventMessage string
 
 const (
-	GameStart   EventMessage = "gameStart"
-	PlayerTurn  EventMessage = "playerTurn"
-	IllegalMove EventMessage = "illegalMove"
-	GameEnded   EventMessage = "gameEnded"
+	GameStart    EventMessage = "gameStart"
+	PlayerTurn   EventMessage = "playerTurn"
+	IllegalMove  EventMessage = "illegalMove"
+	MoveAccepted EventMessage = "moveAccepted"
+	GameEnded    EventMessage = "gameEnded"
 )
 
 type RequestType string

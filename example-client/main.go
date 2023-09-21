@@ -67,6 +67,8 @@ gameLoop:
 		case proto.IllegalMove:
 			println("That move was illegal: Please try again")
 			appState.rollback()
+		case proto.MoveAccepted:
+			println("Waiting for opponent...")
 		case proto.GameEnded:
 			if data.Winner == "player" {
 				println("Game Ended: You Won!")
