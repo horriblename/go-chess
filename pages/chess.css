@@ -1,0 +1,22 @@
+:root {
+
+}
+
+div#notification-container {
+	background: aqua;
+	min-height: 3rem;
+	padding: 1em;
+}
+
+tbody#board-body > tr > td {
+	height: 3rem;
+	width: 3rem;
+}
+
+.tile-dark {
+	background-color: yellow;
+}
+
+.tile-white {
+	background-color: white;
+}
