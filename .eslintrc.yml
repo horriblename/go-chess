@@ -1,0 +1,12 @@
+---
+root: true
+extends: "eslint:recommended"
+env:
+  browser: true
+parserOptions:
+  ecmaVersion: 10
+
+rules:
+  no-unused-vars:
+    - "error"
+    - argsIgnorePattern: "^_"
