@@ -29,6 +29,10 @@ td > * {
   width: 100%;
 }
 
+td.selected {
+  background: skyblue;
+}
+
 .white.rook {
   background-image: url("/assets/white_rook.svg");
 }

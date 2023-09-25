@@ -9,7 +9,10 @@ class AppState {
   constructor() {
     this.color = undefined;
     this.inTurn = false;
-    this.selected_cell = null;
+    // coordinate of the currently selected unit
+    this.selected_unit = null;
+    // coordinate of the target cell, to which to move to
+    this.selected_target = null;
     this.socket = this.start_socket();
   }
 
@@ -28,23 +31,26 @@ class AppState {
         case "gameStart": {
           this.startGame(data.startFirst ? "white" : "black");
           document.getElementById("notification").innerHTML = "";
+          this.inTurn = data.startFirst;
           break;
         }
         case "playerTurn": {
+          this.inTurn = true;
           const [from, to] = data.opponentMove;
           this.move(this.coordFromNotation(from), this.coordFromNotation(to));
           break;
         }
 
         case "moveAccepted":
-          this.selected_cell = null;
+          this.move(this.selected_unit, this.selected_target);
+          this.deselect_unit();
           this.selected_target = null;
-          this.move(this.selected_cell, this.selected_target);
           break;
 
         case "illegalMove": {
-          this.selected_cell = null;
+          this.selected_unit = null;
           this.selected_target = null;
+          this.inTurn = true;
           const notification = document.getElementById("notification");
           const notice = document.createElement("p", { class: "error" });
           notice.innerHTML = "Illegal Move";
@@ -84,8 +90,6 @@ class AppState {
     this.color = color;
     const opp_color = color == "white" ? "black" : "white";
 
-    const row_0 = document.getElementById("row-0");
-    const row_7 = document.getElementById("row-7");
     let home_row = [
       "rook",
       "knight",
@@ -96,30 +100,51 @@ class AppState {
       "knight",
       "rook",
     ];
+    let col_labels = ["a", "b", "c", "d", "e", "f", "g", "h"];
+    let row_labels = [8, 7, 6, 5, 4, 3, 2, 1];
     if (color == "black") {
       home_row = home_row.reverse();
+      col_labels = col_labels.reverse();
+      row_labels = row_labels.reverse();
     }
 
     for (let i in home_row) {
       const type = home_row[i];
-      row_0.children[i].appendChild(AppState.newUnit(opp_color, type));
-      row_7.children[i].appendChild(AppState.newUnit(color, type));
+      document
+        .getElementById(`cell-${i}-0`)
+        .appendChild(AppState.newUnit(opp_color, type));
+      document
+        .getElementById(`cell-${i}-7`)
+        .appendChild(AppState.newUnit(color, type));
     }
 
-    for (const cell of document.getElementById("row-1").children) {
-      cell.appendChild(AppState.newUnit(opp_color, "pawn"));
+    for (let i = 0; i < 8; i++) {
+      document
+        .getElementById(`cell-${i}-1`)
+        .appendChild(AppState.newUnit(opp_color, "pawn"));
+      document
+        .getElementById(`cell-${i}-6`)
+        .appendChild(AppState.newUnit(color, "pawn"));
     }
 
-    for (const cell of document.getElementById("row-6").children) {
-      cell.appendChild(AppState.newUnit(color, "pawn"));
+    const board_body = document.getElementById("board-body");
+    const board_header = document
+      .getElementById("board-header")
+      .getElementsByTagName("th");
+
+    for (const i in col_labels) {
+      board_header[i].appendChild(document.createTextNode(col_labels[i]));
     }
 
-    const board = document.getElementById("board-body");
-    for (let i = 0; i < board.children.length; i++) {
-      const row = board.children[i];
-      for (let j = 0; j < row.children.length; j++) {
-        const cell = row.children[j];
-        cell.onclick = () => this.select_cell(j, i);
+    const row_headers = board_body.getElementsByTagName("th");
+    for (const i in row_labels) {
+      row_headers[i].appendChild(document.createTextNode(row_labels[i]));
+    }
+
+    for (let i = 0; i < 8; i++) {
+      for (let j = 0; j < 8; j++) {
+        document.getElementById(`cell-${j}-${i}`).onclick = () =>
+          this.select_cell(j, i);
       }
     }
   }
@@ -140,8 +165,16 @@ class AppState {
   }
 
   select_cell(x, y) {
-    console.log("selecting ", x, y);
-    if (this.selected_cell == null) {
+    if (!this.inTurn) {
+      return;
+    }
+
+    if (this.selected_unit == null) {
+      if (this.selected_target) {
+        // wait for server to reply whether move is accepted
+        return;
+      }
+
       const selection = document.getElementById(`cell-${x}-${y}`);
       console.assert(selection);
       if (
@@ -150,15 +183,33 @@ class AppState {
       ) {
         return;
       }
-      this.selected_cell = { x: x, y: y };
+      this.select_unit(x, y);
     } else {
+      const selection = document.getElementById(`cell-${x}-${y}`);
+
+      const { x: x0, y: y0 } = this.selected_unit;
+      const selected_unit = document.getElementById(`cell-${x0}-${y0}`);
+      console.assert(selected_unit);
+
+      // selection is another ally unit, change selected_unit to this instead
+      if (
+        selection.firstChild &&
+        !selection.firstChild.classList.contains(this.color)
+      ) {
+        this.deselect_unit();
+        this.select_unit(x, y);
+        return;
+      }
+
       this.selected_target = { x: x, y: y };
+
+      this.inTurn = false;
       this.socket.send(
         JSON.stringify({
           request: "move",
           move: [
             dbg(
-              this.coordToNotation(this.selected_cell.x, this.selected_cell.y),
+              this.coordToNotation(this.selected_unit.x, this.selected_unit.y),
             ),
             dbg(this.coordToNotation(x, y)),
           ],
@@ -167,13 +218,27 @@ class AppState {
     }
   }
 
+  select_unit(x, y) {
+    this.selected_unit = { x: x, y: y };
+    const selection = document.getElementById(`cell-${x}-${y}`);
+    selection.classList.add("selected");
+  }
+
+  deselect_unit() {
+    const { x: x, y: y } = this.selected_unit;
+    this.selected_unit = null;
+    const selection = document.getElementById(`cell-${x}-${y}`);
+    selection.classList.remove("selected");
+  }
+
   coordToNotation(x, y) {
     if (this.color == "white") {
-      x = 7 - x;
       y = 7 - y;
+    } else {
+      x = 7 - x;
     }
 
-    return `${String.fromCodePoint("a".codePointAt(0) + x)}${y}`;
+    return `${String.fromCodePoint("a".codePointAt(0) + x)}${y + 1}`;
   }
 
   coordFromNotation(s) {
@@ -181,8 +246,9 @@ class AppState {
     let y = s.codePointAt(1) - "1".codePointAt(0);
 
     if (this.color == "white") {
-      x = 7 - x;
       y = 7 - y;
+    } else {
+      x = 7 - x;
     }
 
     return { x: x, y: y };
@@ -195,6 +261,7 @@ window.onload = function () {
   for (let i = 0; i < 8; i++) {
     const tr = document.createElement("tr");
     tr.id = `row-${i}`;
+    tr.appendChild(document.createElement("th"));
 
     for (let j = 0; j < 8; j++) {
       const td = document.createElement("td");
