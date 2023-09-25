@@ -48,7 +48,7 @@ class AppState {
           break;
 
         case "illegalMove": {
-          this.selected_unit = null;
+          this.deselect_unit();
           this.selected_target = null;
           this.inTurn = true;
           const notification = document.getElementById("notification");
@@ -194,7 +194,7 @@ class AppState {
       // selection is another ally unit, change selected_unit to this instead
       if (
         selection.firstChild &&
-        !selection.firstChild.classList.contains(this.color)
+        selection.firstChild.classList.contains(this.color)
       ) {
         this.deselect_unit();
         this.select_unit(x, y);
