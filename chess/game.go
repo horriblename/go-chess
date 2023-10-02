@@ -145,13 +145,21 @@ func (self *Board) legalMovesPawn(coord Coord) []Coord {
 	unit := self[coord.Y][coord.X].Unit
 	coords := make([]Coord, 0)
 	direction := 1
+	initRow := 1
 	if unit.Color == Black {
 		direction = -1
+		initRow = 6
 	}
 	var unit_i *Unit
 	ahead := Coord{coord.X, coord.Y + direction}
 	if self.getCoord(ahead).Unit == nil {
 		coords = append(coords, ahead)
+	}
+
+	// pawns that have not moved can move 2 spaces ahead
+	jumpstart := Coord{coord.X, coord.Y + 2*direction}
+	if coord.Y == initRow && self.getCoord(jumpstart).Unit == nil {
+		coords = append(coords, jumpstart)
 	}
 
 	for _, ci := range [2]Coord{ahead.Add(Coord{-1, 0}), ahead.Add(Coord{1, 0})} {
@@ -272,6 +280,10 @@ func CoordFromChessNotation(pos string) (coord Coord, err error) {
 	}
 
 	return Coord{x, y}, nil
+}
+
+func (self *Game) Visualize() string {
+	return self.board.Visualize(White)
 }
 
 func (self *Board) Visualize(side Player) string {
