@@ -110,6 +110,8 @@ func (self *gameSession) startGame() {
 			ready2 = true
 		}
 	}
+	defer close(self.whiteSend)
+	defer close(self.blackSend)
 
 	self.game = chess.NewGame()
 
@@ -131,8 +133,6 @@ gameLoop:
 		select {
 		case rcv, more := <-self.whiteReceive:
 			if !more || rcv.disconnected {
-				close(self.whiteSend)
-				close(self.blackSend)
 				break gameLoop
 			}
 			if self.game.Turn() != chess.White {
@@ -146,8 +146,6 @@ gameLoop:
 
 		case rcv, more := <-self.blackReceive:
 			if !more || rcv.disconnected {
-				close(self.whiteSend)
-				close(self.blackSend)
 				break gameLoop
 			}
 			if self.game.Turn() != chess.Black {
@@ -175,7 +173,7 @@ gameLoop:
 			sendIllegalMove()
 			continue
 		}
-		err = self.game.Play(player, from, to)
+		check, err := self.game.Play(player, from, to)
 		if err != nil {
 			sendIllegalMove()
 			continue
@@ -183,11 +181,13 @@ gameLoop:
 
 		sendPlayer <- proto.Event{
 			Message: proto.MoveAccepted,
+			Check:   check,
 		}
 
 		sendOpponent <- proto.Event{
 			Message:      proto.PlayerTurn,
 			OpponentMove: &req.req.Move,
+			Check:        check,
 		}
 	}
 
@@ -229,6 +229,10 @@ func (self *gameServer) handleConnection(ws *websocket.Conn) {
 		requests = gameSession.blackReceive
 		events = gameSession.blackSend
 	}
+	defer func() {
+		requests <- receiveType{disconnected: true}
+		close(requests)
+	}()
 
 	requests <- receiveType{connected: true}
 
@@ -259,9 +263,7 @@ func (self *gameServer) handleConnection(ws *websocket.Conn) {
 		requests <- receiveType{req: &data_copy}
 	}
 
-	requests <- receiveType{disconnected: true}
-	log.Println("closed one game session")
-	close(requests)
+	log.Println("closed one user session #", userID)
 }
 
 func main() {
