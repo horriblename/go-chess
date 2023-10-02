@@ -10,9 +10,8 @@ import (
 )
 
 type AppState struct {
-	curr *chess.Board
-	// allows undoing 1 move (by our side), used to undo illegal moves
-	save *chess.Board
+	curr        *chess.Board
+	pendingMove *[2]chess.Coord
 
 	color chess.Player
 }
@@ -28,7 +27,7 @@ func main() {
 
 	appState := AppState{
 		curr: chess.NewBoard(),
-		save: chess.NewBoard()}
+	}
 
 	println("Waiting for game...")
 
@@ -62,13 +61,17 @@ gameLoop:
 
 		switch data.Message {
 		case proto.PlayerTurn:
-			appState.playMove(data.OpponentMove[0], data.OpponentMove[1])
+			if data.Check == chess.CheckMate {
+				// wait for game end event
+				continue
+			}
+			appState.move(data.OpponentMove[0], data.OpponentMove[1])
 			fmt.Printf("=== Opponent played: %s -> %s\n", data.OpponentMove[0], data.OpponentMove[1])
+			appState.playerMove(ws)
 		case proto.IllegalMove:
-			println("That move was illegal: Please try again")
-			appState.rollback()
+			panic("unreachable, should be handled in playerMove")
 		case proto.MoveAccepted:
-			println("Waiting for opponent...")
+			panic("unreachable, should be handled in playerMove")
 		case proto.GameEnded:
 			if *data.Winner == "player" {
 				println("Game Ended: You Won!")
@@ -80,8 +83,6 @@ gameLoop:
 		default:
 			log.Printf("unexpected message: %s", data.Message)
 		}
-
-		appState.playerMove(ws)
 	}
 }
 
@@ -94,9 +95,19 @@ func (self *AppState) playerMove(ws *websocket.Conn) {
 	}
 
 	fmt.Printf("=== You played: %s -> %s\n", from, to)
-	err = self.playMove(from, to)
+	var data proto.Event
+	err = websocket.JSON.Receive(ws, &data)
 	if err != nil {
 		panic(err)
+	}
+	switch data.Message {
+	case proto.IllegalMove:
+		self.playerMove(ws)
+		return
+	case proto.MoveAccepted:
+		self.move(from, to)
+	default:
+		panic("unexpected message: " + data.Message)
 	}
 }
 
@@ -121,8 +132,9 @@ func (self *AppState) promptNextMove() (from, to string) {
 	}
 }
 
-func (self *AppState) playMove(from string, to string) error {
-	*self.save = *self.curr
+// move unit in internal board
+func (self *AppState) move(from string, to string) error {
+	// *self.save = *self.curr
 	var err error
 	a, err := chess.CoordFromChessNotation(from)
 	if err != nil {
@@ -140,8 +152,4 @@ func (self *AppState) playMove(from string, to string) error {
 	self.curr[a.Y][a.X].Unit = nil
 
 	return nil
-}
-
-func (self *AppState) rollback() {
-	*self.curr = *self.save
 }
