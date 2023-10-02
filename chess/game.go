@@ -149,8 +149,12 @@ func (self *Board) legalMovesPawn(coord Coord) []Coord {
 		direction = -1
 	}
 	var unit_i *Unit
-	coords = append(coords, Coord{coord.X, coord.Y + direction})
-	for _, ci := range [2]Coord{coord.Add(Coord{-1, 1}), coord.Add(Coord{1, 1})} {
+	ahead := Coord{coord.X, coord.Y + direction}
+	if self.getCoord(ahead).Unit == nil {
+		coords = append(coords, ahead)
+	}
+
+	for _, ci := range [2]Coord{ahead.Add(Coord{-1, 0}), ahead.Add(Coord{1, 0})} {
 		if !inBounds(ci.X, ci.Y) {
 			continue
 		}
