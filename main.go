@@ -191,6 +191,14 @@ gameLoop:
 		}
 
 		if check == chess.CheckMate {
+			sendPlayer <- proto.Event{
+				Message: proto.GameEnded,
+				Winner:  &proto.Player,
+			}
+			sendOpponent <- proto.Event{
+				Message: proto.GameEnded,
+				Winner:  &proto.Opponent,
+			}
 			break gameLoop
 		}
 	}
