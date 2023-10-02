@@ -44,7 +44,7 @@ func main() {
 
 	println("Game Started!\n")
 
-	if data.StartFirst {
+	if *data.StartFirst {
 		appState.color = chess.White
 		appState.playerMove(ws)
 	} else {
@@ -70,7 +70,7 @@ gameLoop:
 		case proto.MoveAccepted:
 			println("Waiting for opponent...")
 		case proto.GameEnded:
-			if data.Winner == "player" {
+			if *data.Winner == "player" {
 				println("Game Ended: You Won!")
 			} else {
 				println("Game Ended: You Lost!")

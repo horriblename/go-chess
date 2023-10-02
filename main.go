@@ -113,8 +113,8 @@ func (self *gameSession) startGame() {
 
 	self.game = chess.NewGame()
 
-	self.whiteSend <- proto.Event{Message: proto.GameStart, StartFirst: true}
-	self.blackSend <- proto.Event{Message: proto.GameStart, StartFirst: false}
+	self.whiteSend <- proto.Event{Message: proto.GameStart, StartFirst: &proto.True}
+	self.blackSend <- proto.Event{Message: proto.GameStart, StartFirst: &proto.False}
 
 	var req receiveType
 	var sendPlayer chan proto.Event
@@ -187,10 +187,8 @@ gameLoop:
 
 		sendOpponent <- proto.Event{
 			Message:      proto.PlayerTurn,
-			OpponentMove: req.req.Move,
+			OpponentMove: &req.req.Move,
 		}
-
-		println(self.game.Visualize())
 	}
 
 	log.Println("game session ended")
