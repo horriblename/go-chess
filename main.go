@@ -189,6 +189,10 @@ gameLoop:
 			OpponentMove: &req.req.Move,
 			Check:        check,
 		}
+
+		if check == chess.CheckMate {
+			break gameLoop
+		}
 	}
 
 	log.Println("game session ended")

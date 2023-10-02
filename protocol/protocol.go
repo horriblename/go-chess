@@ -1,5 +1,7 @@
 package protocol
 
+import "github.com/horriblename/go-chess/chess"
+
 // idk if there is proper terminology for this, but "Event" means server to client,
 // "Request" means client to server
 
@@ -10,10 +12,11 @@ var (
 )
 
 type Event struct {
-	Message      EventMessage `json:"message"`
-	StartFirst   *bool        `json:"startFirst,omitempty"`
-	OpponentMove *[2]string   `json:"opponentMove,omitempty"`
-	Winner       *string      `json:"winner,omitempty"`
+	Message      EventMessage      `json:"message"`
+	StartFirst   *bool             `json:"startFirst,omitempty"`
+	OpponentMove *[2]string        `json:"opponentMove,omitempty"`
+	Winner       *string           `json:"winner,omitempty"`
+	Check        chess.CheckStatus `json:"check,omitempty"`
 }
 
 type Request struct {

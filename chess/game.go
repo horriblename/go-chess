@@ -25,6 +25,15 @@ const (
 	King   ChessPiece = "king"
 )
 
+type CheckStatus string
+
+var (
+	// TODO: implement check
+	NoCheck   CheckStatus = ""
+	Check     CheckStatus = "check"
+	CheckMate CheckStatus = "checkmate"
+)
+
 type Coord struct {
 	X, Y int
 }
@@ -86,18 +95,24 @@ func NewBoard() *Board {
 	return &board
 }
 
-func (self *Game) Play(player Player, from Coord, to Coord) error {
+func (self *Game) Play(player Player, from Coord, to Coord) (CheckStatus, error) {
 	if self.turn != player {
-		return ErrOutOfTurn
+		return NoCheck, ErrOutOfTurn
 	}
 
 	legalMoves, err := self.board.legalMoves(from)
 	if err != nil {
-		return err
+		return NoCheck, err
 	}
 
 	for _, move := range legalMoves {
 		if move == to {
+			checkStatus := NoCheck
+			if self.board.getCoord(to).Unit != nil && self.board.getCoord(to).Unit.Piece == King {
+				// I know that's not what checkmate means, shut up
+				checkStatus = CheckMate
+			}
+
 			self.board.getCoord(to).Unit = self.board.getCoord(from).Unit
 			self.board.getCoord(from).Unit = nil
 			if self.turn == White {
@@ -105,11 +120,11 @@ func (self *Game) Play(player Player, from Coord, to Coord) error {
 			} else {
 				self.turn = White
 			}
-			return nil
+			return checkStatus, nil
 		}
 	}
 
-	return ErrIllegalMove
+	return NoCheck, ErrIllegalMove
 }
 
 func (self *Game) Turn() Player {
