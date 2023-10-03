@@ -20,8 +20,7 @@ class AppState {
     let socket = new WebSocket("ws://localhost:9990/game");
 
     socket.onopen = function (_e) {
-      document.getElementById("notification").innerHTML =
-        "Looking for opponent...";
+      notify("Looking for opponent...");
     };
 
     socket.onmessage = (event) => {
@@ -35,7 +34,9 @@ class AppState {
           break;
         }
         case "playerTurn": {
-          this.inTurn = true;
+          if (data.check != "checkmate") {
+            this.inTurn = true;
+          }
           const [from, to] = data.opponentMove;
           this.move(this.coordFromNotation(from), this.coordFromNotation(to));
           break;
@@ -57,6 +58,15 @@ class AppState {
           notification.replaceChildren(notice);
           break;
         }
+
+        case "gameEnded":
+          if (data.winner == "player") {
+            notify("You won!");
+          } else {
+            notify("You lost!");
+          }
+          socket.close();
+          break;
 
         default:
           console.log("received unknown websocket data ", data);
@@ -253,6 +263,11 @@ class AppState {
 
     return { x: x, y: y };
   }
+}
+
+function notify(msg) {
+  const notification = document.getElementById("notification");
+  notification.innerHTML = msg;
 }
 
 window.onload = function () {
