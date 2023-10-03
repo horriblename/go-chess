@@ -36,7 +36,6 @@ type gameSession struct {
 	whiteSend    chan proto.Event
 	blackReceive chan receiveType
 	blackSend    chan proto.Event
-	waiting      chan bool
 }
 
 // why can't we have union typpppppppppppes
@@ -79,7 +78,6 @@ func (self *gameServer) gameSessionGenerator() {
 			whiteSend:    make(chan proto.Event),
 			blackReceive: make(chan receiveType),
 			blackSend:    make(chan proto.Event),
-			waiting:      make(chan bool, 1),
 		}
 		self.gameSessions[gid] = session
 
