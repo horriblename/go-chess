@@ -92,6 +92,78 @@ func (self *gameServer) gameSessionGenerator() {
 	}
 }
 
+func (self *gameServer) generateUniqueUserID() userID {
+	// TODO: limit loop count and return an error
+	for {
+		n := userID(rand.Int())
+		if _, ok := self.userSessions[n]; !ok {
+			return n
+		}
+	}
+}
+func (self *gameServer) generateUniqueGameID() gameID {
+	// TODO: limit loop count and return an error
+	for {
+		n := gameID(rand.Int())
+		if _, ok := self.gameSessions[n]; !ok {
+			return n
+		}
+	}
+}
+
+func (self *gameServer) handleConnection(ws *websocket.Conn) {
+	var err error
+	var data proto.Request
+	userID := <-self.idGenerator
+	gameID := self.userSessions[userID]
+	gameSession := self.gameSessions[gameID]
+	var requests chan receiveType
+	var events chan proto.Event
+
+	if gameSession.white == userID {
+		requests = gameSession.whiteReceive
+		events = gameSession.whiteSend
+	} else {
+		requests = gameSession.blackReceive
+		events = gameSession.blackSend
+	}
+	defer func() {
+		requests <- receiveType{disconnected: true}
+		close(requests)
+	}()
+
+	requests <- receiveType{connected: true}
+
+	go func() {
+		var ev proto.Event
+		var more bool
+		for {
+			ev, more = <-events
+			if !more {
+				break
+			}
+			if err = websocket.JSON.Send(ws, &ev); err != nil {
+				log.Println("FIXME: error handling ", err)
+			}
+		}
+	}()
+
+	for {
+		if err = websocket.JSON.Receive(ws, &data); err != nil {
+			if err == io.EOF {
+				break
+			}
+			log.Println("FIXME: error handling ", err)
+			break
+		}
+
+		data_copy := data
+		requests <- receiveType{req: &data_copy}
+	}
+
+	log.Println("closed one user session #", userID)
+}
+
 func (self *gameSession) startGame() {
 	var err error
 	var from, to chess.Coord
@@ -204,78 +276,6 @@ gameLoop:
 	}
 
 	log.Println("game session ended")
-}
-
-func (self *gameServer) generateUniqueUserID() userID {
-	// TODO: limit loop count and return an error
-	for {
-		n := userID(rand.Int())
-		if _, ok := self.userSessions[n]; !ok {
-			return n
-		}
-	}
-}
-func (self *gameServer) generateUniqueGameID() gameID {
-	// TODO: limit loop count and return an error
-	for {
-		n := gameID(rand.Int())
-		if _, ok := self.gameSessions[n]; !ok {
-			return n
-		}
-	}
-}
-
-func (self *gameServer) handleConnection(ws *websocket.Conn) {
-	var err error
-	var data proto.Request
-	userID := <-self.idGenerator
-	gameID := self.userSessions[userID]
-	gameSession := self.gameSessions[gameID]
-	var requests chan receiveType
-	var events chan proto.Event
-
-	if gameSession.white == userID {
-		requests = gameSession.whiteReceive
-		events = gameSession.whiteSend
-	} else {
-		requests = gameSession.blackReceive
-		events = gameSession.blackSend
-	}
-	defer func() {
-		requests <- receiveType{disconnected: true}
-		close(requests)
-	}()
-
-	requests <- receiveType{connected: true}
-
-	go func() {
-		var ev proto.Event
-		var more bool
-		for {
-			ev, more = <-events
-			if !more {
-				break
-			}
-			if err = websocket.JSON.Send(ws, &ev); err != nil {
-				log.Println("FIXME: error handling ", err)
-			}
-		}
-	}()
-
-	for {
-		if err = websocket.JSON.Receive(ws, &data); err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Println("FIXME: error handling ", err)
-			break
-		}
-
-		data_copy := data
-		requests <- receiveType{req: &data_copy}
-	}
-
-	log.Println("closed one user session #", userID)
 }
 
 func main() {
