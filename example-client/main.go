@@ -116,7 +116,10 @@ func (self *AppState) promptNextMove() (from, to string) {
 	for {
 		println(self.curr.Visualize(self.color))
 		print("what's your next move? ")
-		fmt.Scanf("%s %s", &from, &to)
+		_, err = fmt.Scanf("%s %s", &from, &to)
+		if err != nil {
+			panic("error reading input")
+		}
 
 		_, err = chess.CoordFromChessNotation(from)
 		if err != nil {
